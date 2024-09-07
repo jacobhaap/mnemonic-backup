@@ -25,5 +25,13 @@
   "dependencies": {
     "@scure/base": "^1.1.8",
     "@scure/bip39": "^1.4.0"
-  }
+  },
+  "keywords": [
+    "mnemonic",
+    "phrase",
+    "backup",
+    "code",
+    "recovery",
+    "authentication"
+  ]
 }

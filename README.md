@@ -119,7 +119,7 @@ encryptMnemonic(mnemonic, key, iv);
 ```
 This function expects a `mnemonic` parameter, which should be a Mnemonic Phrase, and a `key` parameter, which should be a cryptographic key (using a prepared key is recommended). An optional Initialization Vector (`iv`) parameter is accepted, which is expected to be provided as a hexadecimal string (24 characters). If no Initialization Vector is provided, a Buffer of 12 random bytes (`crypto.randomBytes(12);`) is used.
 
-*Example use:*
+*Example use with "iv" provided:*
 ```js
 const { encryptMnemonic } = require('mnemonic-backup');
 
