@@ -3,33 +3,33 @@
 
 > A mnemonic solution for backup/recovery codes.
 
-Mnemonic Backup is an implementation of 14-word Mnemonic Backup Phrases, designed for use cases such as backup and recovery codes. To get started, install install the library:
+Mnemonic Backup is an implementation of 14-word Mnemonic Backup Phrases. These backup phrases are intended for use as a more user-friendly/memorable alternative to traditional backup/recovery codes. The primary functionality of this library concerns the encryption of mnemonics, using keys derived from the same mnemonics via deterministic functions. In an implementation such as part of a user account system, backup phrases can be used to verify account ownership by using a backup phrase to decrypt a matching phrase from cyphertext associated with the account.
+
+ To get started, install the library:
 ```bash
 npm install mnemonic-backup
 ```
 This library consists of five functions: **generateMnemonic**, **generateKey**, **prepareKey**, **encryptMnemonic**, and **decryptMnemonic**. These functions are used in the creation of mnemonic phrases, cryptographic keys, and for the encryption and decryption of Mnemonic Backup Phrases.
 
 ## Mnemonic Phrase Generation
-The Mnemonic Phrase is generated using the `generateMnemonic`  function, entropy is used to obtain a mnemonic by mapping 11-bit segments to words in the BIP39 English wordlist from **@scure/bip39**.
+The Mnemonic Phrase is generated using the `generateMnemonic`  function, where 11-bit segments of provided or internally generated entropy are used to create a mnemonic, using words from the BIP39 English wordlist, provided by **[@iacobus/bip39](https://www.npmjs.com/package/@iacobus/bip39)**.
 ```js
 generateMnemonic(entropy);
 ```
-This function expects a single optional `entropy` parameter, expecting 154 bits of entropy directly as bits when provided. If the `entropy` parameter is not provided, entropy is generated locally with the Node.js **Crypto** module's `crypto.randomBytes();` function.
+This function expects a single optional `entropy` parameter, expecting 154 bits of entropy directly as bits when provided. This function acts as a proxy to the `mnemonic();` [function of the **mnemonic-key** library](https://www.npmjs.com/package/mnemonic-key#mnemonic-phrases). If no entropy is provided, the library will internally generate entropy.
 
 *Example use with "entropy" provided:*
 ```js
 const { generateMnemonic } = require('mnemonic-backup');
 
 // 176 Bits of entropy in Hex
-const hex = "596F75206A757374206C6F7374205468652047616D65";
-// Obtain Bits from Hex
-const entropy = hex.split('').map(char => parseInt(char, 16).toString(2).padStart(4, '0')).join('');
+const entropy = "596F75206A757374206C6F7374205468652047616D65";
 
 const mnemonic = generateMnemonic(entropy);
 console.log("Mnemonic Phrase:", mnemonic);
 
-// Function Output 
-// Mnemonic Phrase: floor knife elite stay fire ring like mistake inflict patient bench speak faith casual
+// Sample Output:
+// Mnemonic Phrase: floor knife elite stay fire ring like mistake inflict patient bench speak faith carbon
 
 ```
 *The function returns a 14-word Mnemonic Phrase derived from the generated or provided entropy in the output.*
@@ -37,33 +37,29 @@ console.log("Mnemonic Phrase:", mnemonic);
 ## Obtaining a Cryptographic Key
 
 ### Generating a Key
-A Cryptographic Key is derived from the last word of the 14 word Mnemonic Phrase using the **PBKDF2** (Password-Based Key Derivation Function 2) asynchronous key derivation function.
-```js
-crypto.pbkdf2(password, salt, iterations, keylen, digest, callback);
-```
-In this setup, the last word of the Mnemonic Phrase is supplied as the `password`. A Buffer is obtained from the first 13 words of the Mnemonic Phrase, then encoded in base58 (**@scure/base**) to derive a `salt`. A number of `iterations` is provided, the requested byte length of the key (`keylen`) is set to *32*, and the `digest` is set to *SHA512*.
+A Cryptographic Key is derived from the Mnemonic Phrase using the `getKey();` [function of the **mnemonic-key** library](https://www.npmjs.com/package/mnemonic-key#cryptographic-keys), which the `generateKey();` function acts as a proxy to. Keys are obtained from mnemonics using the **PBKDF2** (Password-Based Key Derivation Function 2) synchronous key derivation function.
 
 ### Using the `generateKey` function.
 To generate the Cryptographic Key, the `generateKey` function is used. 
 ```js
 generateKey(mnemonic, iterations);
 ```
-This function expects a `mnemonic` parameter, which should be the Mnemonic Phrase. An optional `iterations` parameter may also be provided, allowing the number of iterations to be specified. If no number is provided, a default of *210,000* will be used, based on the [OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2) recommendations for **PBKDF2-HMAC-SHA512**.
+This function expects a `mnemonic` parameter, which should be the Mnemonic Phrase. An optional `iterations` parameter may also be provided, allowing the number of iterations to be specified. If no number is provided, a default of *210,000* will be used, based on the [OWASP recommendations](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2) for **PBKDF2-HMAC-SHA512**.
 
 *Example use without "iterations" provided:*
 ```js
 const { generateKey } = require('mnemonic-backup');
 
 // 14 Word Mnemonic Phrase
-const mnemonic = "floor knife elite stay fire ring like mistake inflict patient bench speak faith casual";
+const mnemonic = "floor knife elite stay fire ring like mistake inflict patient bench speak faith carbon";
 
 generateKey(mnemonic)
     .then((key) => {
         console.log("Cryptographic Key:", key);
     });
 
-// Function Output
-// Cryptographic Key: 1b0b26d1325109b4b2235c83960c185d8651633523d95e33f6f1551299ec7b68
+// Sample Output:
+// Cryptographic Key: 5581d8bf77f333b1ec6c6b1ba28abbdd7a9d3c7d3857c99ae1cac47ee1734bc0
 
 ```
 *The function returns a Cryptographic Key derived from the provided Mnemonic Phrase in the output.*
@@ -80,18 +76,18 @@ To prepare a Cryptographic Key, the `prepareKey` function is used.
 ```js
 prepareKey(key, pepper, salt, iterations);
 ```
-This function expects a `key` parameter, which should be the Cryptographic Key. A `pepper` and a `salt` parameter are expected, provided for peppering and salting the key. An optional `iterations` parameter may also be provided, allowing the number of iterations to be specified. If no number is provided, a default of *600,000* will be used, based on the [OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2) recommendations for **PBKDF2-HMAC-SHA256**.
+This function expects a `key` parameter, which should be the Cryptographic Key. A `pepper` and a `salt` parameter are expected, provided for peppering and salting the key. An optional `iterations` parameter may also be provided, allowing the number of iterations to be specified. If no number is provided, a default of *600,000* will be used, based on the [OWASP recommendations](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2) for **PBKDF2-HMAC-SHA256**.
 
 *Example use with "iterations" provided:*
 ```js
-const { prepareKey } = require('./src/index');
+const { prepareKey } = require('mnemonic-backup');
 
 // Cryptographic Key
-const key = "1b0b26d1325109b4b2235c83960c185d8651633523d95e33f6f1551299ec7b68"
+const key = "5581d8bf77f333b1ec6c6b1ba28abbdd7a9d3c7d3857c99ae1cac47ee1734bc0"
 
 // Pepper and Salt
-const pepper = "54455354494E4720534F4D455448494E47"
-const salt = "48454C4C4F";
+const pepper = "57686174206973207468652074727574683F20"
+const salt = "4E6F7468696E67204D617474657273203A29";
 
 // Iterations set to 750,000
 const iterations = 750000;
@@ -99,14 +95,14 @@ const iterations = 750000;
 const preparedKey = prepareKey(key, pepper, salt, iterations);
 console.log("Prepared Key:", preparedKey);
 
-// Function Output 
-// Prepared Key: fa73e7bf88788dd087e3e620ded7e4fc0e43c771213ea1e867ff486a2349c37d
+// Sample Output:
+// Prepared Key: 773b371566d8ebbc57d9d9ce581e6fcd13d3d57f617d366fcfebd2937f8a05da
 
 ```
 *The function returns the prepared cryptographic key in the output.*
 
 ## Encrypting the Mnemonic Phrase
-A cypher is created by encrypting the Mnemonic Phrase with **AES** (Advanced Encryption Standard) at a length of 256 bits using **GCM** (Galois/Counter Mode).
+A cypher is created by [encrypting](https://nodejs.org/api/crypto.html#cryptocreatecipherivalgorithm-key-iv-options) the Mnemonic Phrase with **AES** (Advanced Encryption Standard) at a length of 256 bits using **GCM** (Galois/Counter Mode).
 ```js
 crypto.createCipheriv(algorithm, key, iv[, options]);
 ```
@@ -124,10 +120,10 @@ This function expects a `mnemonic` parameter, which should be a Mnemonic Phrase,
 const { encryptMnemonic } = require('mnemonic-backup');
 
 // 14 Word Mnemonic Phrase
-const mnemonic = "floor knife elite stay fire ring like mistake inflict patient bench speak faith casual";
+const mnemonic = "floor knife elite stay fire ring like mistake inflict patient bench speak faith carbon";
 
 // Cryptographic Key (prepared key)
-const key = "fa73e7bf88788dd087e3e620ded7e4fc0e43c771213ea1e867ff486a2349c37d";
+const key = "773b371566d8ebbc57d9d9ce581e6fcd13d3d57f617d366fcfebd2937f8a05da";
 
 // Initialization Vector provided in Hex
 const iv = "44494e4f5341555253212121";
@@ -137,16 +133,16 @@ const result = encryptMnemonic(mnemonic, key, iv);
     console.log("IV:", result.iv);
     console.log("Auth Tag:", result.authTag);
 
-// Function Output
-// Cyphertext: 6e8cbaafd728268b6af57b6efcd8127c1320add5eafde1bf96d254e76a7fb57e9935ecc291650124a6ac5d8a5489de070ff8e2cd34ae141a0abf06315193d1d604194c36958f5025261ef72ba9b46634d6809173599a
+// Sample Output:
+// Cyphertext: 4955bb6686bd53bb792298bcc039cba5e7e5dfe7e14150a8e5d0ade51d129d0874b251b76450293db1d67a6dfe5a8236bfe303568e8aaedd5566f02f0032874c512693ff58ce33a8d5c4d7f75481ff7158f72eefa081
 // IV: 44494e4f5341555253212121
-// Auth Tag: b9b59deb711ac178d48efa3f6ae5ddb5
+// Auth Tag: 8c7708ed8f31c292c89aae9ceb175102
 
 ```
 *The function returns the Cyphertext, Initialization Vector, and Authentication Tag from the encryption of the Mnemonic Phrase in the output.*
 
 ## Decryption
-A cypher/encrypted Mnemonic Phrase is decrypted using the *cyphertext* and *authTag* from the encryption output, along with the same key and Initialization Vector used for encryption.
+A cypher/encrypted Mnemonic Phrase is [decrypted](https://nodejs.org/api/crypto.html#cryptocreatedecipherivalgorithm-key-iv-options) using the *cyphertext* and *authTag* from the encryption output, along with the same key and Initialization Vector used for encryption.
 ```js
 crypto.createDecipheriv(algorithm, key, iv[, options]);
 ```
@@ -164,18 +160,18 @@ This function expects a `cyphertext` parameter, containing the cyphertext of the
 const { decryptMnemonic } = require('mnemonic-backup');
 
 // Cryptographic Key
-const key = "fa73e7bf88788dd087e3e620ded7e4fc0e43c771213ea1e867ff486a2349c37d";
+const key = "773b371566d8ebbc57d9d9ce581e6fcd13d3d57f617d366fcfebd2937f8a05da";
 
 // cyphertext, iv, and authTag from Encryption
-const cyphertext = "6e8cbaafd728268b6af57b6efcd8127c1320add5eafde1bf96d254e76a7fb57e9935ecc291650124a6ac5d8a5489de070ff8e2cd34ae141a0abf06315193d1d604194c36958f5025261ef72ba9b46634d6809173599a";
+const cyphertext = "4955bb6686bd53bb792298bcc039cba5e7e5dfe7e14150a8e5d0ade51d129d0874b251b76450293db1d67a6dfe5a8236bfe303568e8aaedd5566f02f0032874c512693ff58ce33a8d5c4d7f75481ff7158f72eefa081";
 const iv = "44494e4f5341555253212121";
-const authTag = "b9b59deb711ac178d48efa3f6ae5ddb5";
+const authTag = "8c7708ed8f31c292c89aae9ceb175102";
 
 const decryptedMnemonic = decryptMnemonic(cyphertext, key, iv, authTag);
 console.log("Decrypted Mnemonic:", decryptedMnemonic);
 
-// Function Output
-// Decrypted Mnemonic: floor knife elite stay fire ring like mistake inflict patient bench speak faith casual
+// Sample Output:
+// Decrypted Mnemonic: floor knife elite stay fire ring like mistake inflict patient bench speak faith carbon
 
 ```
 *The function returns the decrypted Mnemonic Phrase in the output.*
