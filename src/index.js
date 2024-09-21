@@ -1,5 +1,5 @@
-const mnemonic = require('./mnemonic');
-const { key, prepKey } = require('./key');
+const { mnemonic, getKey } = require('mnemonic-key');
+const prepKey = require('./key');
 const cypher = require('./cypher');
 const decypher = require('./decypher');
 
@@ -8,7 +8,7 @@ function generateMnemonic(entropy = null) {
 }
 
 function generateKey(mnemonic, iterations = null) {
-    return key(mnemonic, iterations);
+    return getKey(mnemonic, iterations);
 }
 
 function prepareKey(key, pepper, salt, iterations = null) {
